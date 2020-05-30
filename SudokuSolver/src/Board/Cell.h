@@ -18,7 +18,13 @@ public:
       else       m_nPossibleValues &= ~(1 << (digit - 1));
    }
 
+   inline unsigned char GetValue() const { return m_nValue; }
+   inline void SetValue(unsigned char c) { m_nValue = c; }
+
    void OnRender(int x, int y);
+   void OnRenderSelected(int x, int y);
+
+   void Clear();
 private:
    //bitmask... LSB stores digit 1. Value at that bit is true if its value is possible
    unsigned short m_nPossibleValues;

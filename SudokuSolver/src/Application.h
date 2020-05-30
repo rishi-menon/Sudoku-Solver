@@ -10,6 +10,10 @@ public:
    ~Application();
 
    void Run();
+   BoardManager& GetBoardManager() { return m_boardManager; }
+
+   inline int GetWidth() const { return m_nWidth; }
+   inline int GetHeight() const { return m_nHeight; }
 
 private:
    void DrawBackground();

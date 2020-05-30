@@ -16,6 +16,10 @@ namespace MathR
    {
       return Clamp(0.0, 1.0, value);
    }
+   double GetPercent(double min, double max, double value)
+   {
+      return (value - min) / (max - min);
+   }
    glm::vec4 LerpColor(const glm::vec4& col1, const glm::vec4& col2, double percent)
    {
       glm::vec4 col;

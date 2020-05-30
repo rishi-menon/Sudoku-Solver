@@ -12,10 +12,19 @@ public:
    ~BoardManager();
 
    void SetBoardPos(const glm::vec4& pos) { g_rectBoard = pos; }
-   void DrawBoard();
+   
+   void OnMouseDown(double posX, double posY);
+   void OnKeyDown(int key);
 
+   void DrawBoard();
    void OnRender();
 
+   //This function does the solving 
+   void Update();
+
+private:
+   void Clear();
 private:
    Board* m_pBoard;
+   bool m_bSolving;
 };

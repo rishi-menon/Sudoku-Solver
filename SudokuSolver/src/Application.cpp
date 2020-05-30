@@ -24,12 +24,51 @@ void Application::Run()
 {
    Renderer::Init();
    Renderer::SetMvpMatrix(0.0f, m_nWidth, 0.0f, m_nHeight);
+
    {
       unsigned char buf[] = { 255, 255, 255, 255 };
       Texture* whiteId = AssetManager::LoadTexture(1, 1, buf, 0);
       Texture* texId = AssetManager::LoadTexture("Assets/Image/number.png", 1);
    }
+
    glcall(glClearColor(0.2f, 0.2f, 0.2f, 1.0f));
+
+
+   //Setup window callback events
+  
+   glfwSetWindowUserPointer(m_pWindow, this);
+
+   glfwSetMouseButtonCallback(m_pWindow, [](GLFWwindow* window, int button, int action, int mods)
+      {
+         Application* pApp = static_cast<Application*>(glfwGetWindowUserPointer(window));
+         if (pApp)
+         {
+            //LOG_INFO("button {0}, action {1}", button, action);
+            if (button == 0 && action == GLFW_PRESS)
+            {
+               double x, y;
+               glfwGetCursorPos(window, &x, &y);
+               y = pApp->GetHeight() - y;
+               pApp->GetBoardManager().OnMouseDown(x, y);
+            }
+         }
+         else { LOG_ERROR("Error: Application was null"); }
+      });
+
+   glfwSetKeyCallback(m_pWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods) 
+      {
+         Application* pApp = static_cast<Application*>(glfwGetWindowUserPointer(window));
+         if (pApp)
+         {
+            //LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
+            if (action == GLFW_PRESS)
+            {
+               pApp->GetBoardManager().OnKeyDown(key);
+            }
+
+         }
+         else { LOG_ERROR("Error: Application was null"); }
+      });
 
    DrawBackground();
    while (!glfwWindowShouldClose(m_pWindow))
@@ -37,11 +76,9 @@ void Application::Run()
       glcall(glClear(GL_COLOR_BUFFER_BIT));
       Renderer::BegineScene();
 
-      double x, y;
-      glfwGetCursorPos(m_pWindow, &x, &y);
-      LOG_INFO( "Mouse Pos x:{0}, y:{1}", x,y);
-
+      m_boardManager.Update();
       m_boardManager.OnRender();
+
       Renderer::EndScene();
       glfwSwapBuffers(m_pWindow);
       glfwPollEvents();
@@ -49,8 +86,6 @@ void Application::Run()
 
    AssetManager::OnExit();
 }
-
-#include <stb_image.h>
 
 void Application::DrawBackground()
 {

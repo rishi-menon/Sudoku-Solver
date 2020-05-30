@@ -5,7 +5,8 @@
 
 glm::vec4 g_rectBoard;
 
-BoardManager::BoardManager()
+BoardManager::BoardManager() :
+   m_bSolving (false)
 {
    m_pBoard = new Board;
 }
@@ -19,6 +20,55 @@ BoardManager::~BoardManager()
    }
 }
 
+void BoardManager::OnMouseDown(double posX, double posY)
+{
+   if (m_pBoard)
+   {
+      m_pBoard->OnMouseDown(posX, posY);
+   }
+   else { LOG_WARN("Warning: Current board is null"); }
+}
+void BoardManager::OnKeyDown(int key)
+{
+   const int nSolvingKey = 'S';
+   const int nClearAllKey = 'C';
+   if (m_pBoard)
+   {
+      //Start solving here
+      if (!m_bSolving)
+      {
+         m_pBoard->OnKeyDown(key);
+         if (key == nSolvingKey)
+         {
+            m_bSolving = true;
+         }
+      }
+      if (key == nClearAllKey)
+      {
+         Clear();
+         m_bSolving = false;
+      }
+   }
+   else { LOG_WARN("Warning: Current board is null"); }
+}
+
+void BoardManager::Clear()
+{
+   if (!m_pBoard) m_pBoard = new Board();
+   else
+   {
+      Board* pNext = m_pBoard->GetNext();
+      while (pNext)
+      {
+         Board* pBoard = pNext->GetNext();
+         delete pNext;
+         pNext = pBoard;
+      }
+
+      m_pBoard->SetNext(nullptr);
+      m_pBoard->ClearBoard();
+   }
+}
 void BoardManager::DrawBoard()
 {
    //properties
@@ -65,5 +115,15 @@ void BoardManager::OnRender()
    {
       m_pBoard->OnRender();
    }
-   else LOG_WARN("Warning: Current board is null");
+   else { LOG_WARN("Warning: Current board is null"); }
+}
+
+void BoardManager::Update()
+{
+   if (!m_bSolving) return;
+
+   //Start solving here
+
+
+
 }
