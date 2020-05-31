@@ -61,9 +61,9 @@ void Application::Run()
          if (pApp)
          {
             //LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
-            if (action == GLFW_PRESS)
+            if (action == GLFW_PRESS || action == GLFW_REPEAT)
             {
-               pApp->GetBoardManager().OnKeyDown(key);
+               pApp->GetBoardManager().OnKey(key);
             }
 
          }

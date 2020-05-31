@@ -28,7 +28,7 @@ void BoardManager::OnMouseDown(double posX, double posY)
    }
    else { LOG_WARN("Warning: Current board is null"); }
 }
-void BoardManager::OnKeyDown(int key)
+void BoardManager::OnKey(int key)
 {
    const int nSolvingKey = 'S';
    const int nClearAllKey = 'C';
@@ -37,10 +37,11 @@ void BoardManager::OnKeyDown(int key)
       //Start solving here
       if (!m_bSolving)
       {
-         m_pBoard->OnKeyDown(key);
+         m_pBoard->OnKey(key);
          if (key == nSolvingKey)
          {
             m_bSolving = true;
+            m_pBoard->ClearSelection();
          }
       }
       if (key == nClearAllKey)

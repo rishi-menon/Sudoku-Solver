@@ -40,22 +40,68 @@ void Board::OnMouseDown(double posX, double posY)
    }
    else
    {
-      m_nSelectedX = -1;
-      m_nSelectedY = -1;
-      m_pCurrentCell = nullptr;
+       ClearSelection();
    }
 }
 
-void Board::OnKeyDown(int key)
+void Board::OnKey(int key)
 {
-   if (m_pCurrentCell)
-   {
-      unsigned char val = static_cast<unsigned char> (key - '0');
-      if (val >= 0 && val < 10)
-      {
-         m_pCurrentCell->SetValue(val);
-      }
-   }
+    //keyboard key values
+    const int nLeft = 263;
+    const int nRight = 262;
+    const int nUp = 265;
+    const int nDown = 264;
+
+    if (m_pCurrentCell)
+    {
+        //move the current selection if the arrow keys weer pressed
+        //move the currnet selection with the arrow keys
+        switch (key)
+        {
+            case nLeft:
+            {
+                m_nSelectedX--;
+                if (m_nSelectedX < 0) m_nSelectedX = 8;
+                break;
+            }
+            case nRight:
+            {
+                m_nSelectedX++;
+                if (m_nSelectedX > 8) m_nSelectedX = 0;
+                break;
+
+            }
+            case nUp:
+            {
+                m_nSelectedY++;
+                if (m_nSelectedY > 8) m_nSelectedY = 0;
+                break;
+
+            }
+            case nDown:
+            {
+                m_nSelectedY--;
+                if (m_nSelectedY < 0) m_nSelectedY = 8;
+                break;
+
+            }
+        }
+
+        //insert a number into the currrently selected block if a number key was pressed
+        unsigned char val = static_cast<unsigned char> (key - '0');
+        if (val >= 0 && val < 10)
+        {
+            m_pCurrentCell->SetValue(val);
+        }
+    }
+    else if (key >= nRight && key <= nUp)
+    {
+        //select the 0,0 tile by default
+        m_nSelectedX = m_nSelectedY = 0;
+    }
+
+    m_pCurrentCell = &m_Cells[m_nSelectedX + m_nSelectedY * 9];
+
 }
 
 void Board::ClearBoard()

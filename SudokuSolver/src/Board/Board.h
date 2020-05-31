@@ -11,11 +11,12 @@ public:
    inline Board* GetNext() const { return m_nextBoard; }
 
    void OnMouseDown(double posX, double posY);
-   void OnKeyDown(int key);
+   void OnKey(int key);
 
    inline void SetNext(Board* pNext) { m_nextBoard = pNext; }
    void ClearBoard();
 
+   void ClearSelection() { m_pCurrentCell = nullptr;  }
 private:
    Cell m_Cells[81];
    Cell* m_pCurrentCell;

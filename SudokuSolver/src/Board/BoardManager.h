@@ -14,7 +14,7 @@ public:
    void SetBoardPos(const glm::vec4& pos) { g_rectBoard = pos; }
    
    void OnMouseDown(double posX, double posY);
-   void OnKeyDown(int key);
+   void OnKey(int key);
 
    void DrawBoard();
    void OnRender();
