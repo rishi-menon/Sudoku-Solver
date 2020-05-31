@@ -3,9 +3,23 @@
 #include "Board.h"
 
 Board::Board() :
-   m_nextBoard (nullptr)
+   m_nextBoard (nullptr),
+    m_nMiss (0),
+    m_nSelectedX(-1),
+    m_nSelectedY(-1)
 {
+}
 
+Board::Board(const Board& board) :
+    m_nextBoard(nullptr),
+    m_nMiss(0),
+    m_nSelectedX(-1),
+    m_nSelectedY(-1)
+{
+    for (int i = 0; i < 81; i++)
+    {
+        m_Cells[i] = board.m_Cells[i];
+    }
 }
 
 void Board::OnRender()
@@ -44,8 +58,26 @@ void Board::OnMouseDown(double posX, double posY)
    }
 }
 
-void Board::OnKey(int key)
+void Board::OnKey(int key, bool bSolving)
 {
+
+    if (bSolving)
+    {
+        return;
+    }
+#if 0
+    if (key == 'W')
+    {
+        //draw the sub keys
+        for (int y = 0; y < 9; y++)
+        {
+            for (int x = 0; x < 9; x++)
+            {
+                m_Cells[x + y*9].OnRenderSubNumbers(x, y);
+            }
+        }
+    }
+#endif
     //keyboard key values
     const int nLeft = 263;
     const int nRight = 262;
@@ -116,7 +148,10 @@ void Board::ResetPossibleValues()
     
     for (int i = 0; i < 81; i++)
     {
-        m_Cells[i].SetPossibleL(0x01FF);
+        if (!m_Cells[i].GetValue())
+        {
+            m_Cells[i].SetPossibleL(0x01FF);
+        }
     }
 }
 void Board::LoadBoard(unsigned char data[81])
@@ -137,12 +172,16 @@ bool Board::IsSolved() const
     {
         for (int x = 0; x < 9; x++)
         {
-            if (m_Cells[x + 9 * y].GetValue() == 0) return false;
+            unsigned char val = m_Cells[x + 9 * y].GetValue();
+            if (val < 1 || val > 9) return false;
         }
     }
     return true;
 }
 
+/////////////////////////////////////////////////////////////////////////
+//                   Check Contradiction                               //
+/////////////////////////////////////////////////////////////////////////
 bool Board::CheckContradiction() const
 {
     auto ResetArray = [](bool arr[])
@@ -219,66 +258,68 @@ bool Board::CheckContradiction() const
     return false;
 }
 
-SolveState Board::SolveStep()
+/////////////////////////////////////////////////////////////////////////
+//                                                                     //
+//                                                                     //
+//                   Eliminate Possible Values                         //
+//                                                                     //
+//                                                                     //
+/////////////////////////////////////////////////////////////////////////
+void Board::EliminatePossibleValues()
 {
-    if (IsSolved()) return SolveState::Solved;
-    if (CheckContradiction())
+    auto CalculateSeen = [this](int x, int y, short& seen)
     {
-        //LOG_WARN("Contradiction");
-        return SolveState::Contradiction;
-    }
+        unsigned char c = m_Cells[x + 9 * y].GetValue();
+        if (c)
+        {
+            ASSERT(c < 10 && c >= 0, "Value of the cell is out of range.");
+            seen |= (1 << (c - 1));
+        }
+    };
 
-    //go through each column, Store a list of numbers that are known, and eliminate those numbers
+    auto RemoveSeen = [this](int x, int y, short seen)
+    {
+        if (!m_Cells[x + y * 9].GetValue())
+        {
+            m_Cells[x + 9 * y].RemovePossibleL(seen);
+        }
+    };
+
+    //go through each COLUMN, Store a list of numbers that are known, and eliminate those numbers
     for (int x = 0; x < 9; x++)
     {
         short nSeen = 0;
-        //calculate the seen numbers
+        //Calculate the seen numbers
         for (int y = 0; y < 9; y++)
         {
-            unsigned char c = m_Cells[x + 9 * y].GetValue();
-            if (c)
-            {
-                ASSERT(c < 10 && c >= 0, "Value of the cell is out of range.");
-                nSeen |= (1 << (c-1));
-            }
+            CalculateSeen(x, y, nSeen);
         }
 
         //Since we have calculated the seen numbers, remove it from the list of all possible numbers for that column
         for (int y = 0; y < 9; y++)
         {
-            if (!m_Cells[x + y * 9].GetValue())
-            {
-                m_Cells[x + 9 * y].RemovePossibleL(nSeen);
-            }
+            RemoveSeen(x, y, nSeen);
         }
     }
 
-    //go through each row, Store a list of numbers that are fixed for that row (we know its value), and eliminate those 'seen' numbers from the possible values in that row
+    //go through each ROW, Store a list of numbers that are fixed for that row (we know its value), and eliminate those 'seen' numbers from the possible values in that row
     for (int y = 0; y < 9; y++)
     {
         short nSeen = 0;
         //calculate the seen numbers
         for (int x = 0; x < 9; x++)
         {
-            unsigned char c = m_Cells[x + 9 * y].GetValue();
-            if (c)
-            {
-                ASSERT(c < 10 && c >= 0, "Value of the cell is out of range.");
-                nSeen |= (1 << (c-1));
-            }
+            CalculateSeen(x, y, nSeen);
         }
 
         //Since we have calculated the seen numbers, remove it from the list of all possible numbers for that row
         for (int x = 0; x < 9; x++)
         {
-            if (!m_Cells[x + y * 9].GetValue())
-            {
-                m_Cells[x + 9 * y].RemovePossibleL(nSeen);
-            }
+            RemoveSeen(x, y, nSeen);
         }
     }
 
-    //go through each 3X3 block to remove possible values
+    //go through each 3X3 BLOCK to remove possible values
     for (int outerY = 0; outerY <= 6; outerY += 3)
     {
         for (int outerX = 0; outerX <= 6; outerX += 3)
@@ -291,14 +332,9 @@ SolveState Board::SolveStep()
                 for (int innerX = 0; innerX < 3; innerX++)
                 {
                     const int x = outerX + innerX;
-                    unsigned char c = m_Cells[x + y * 9].GetValue();
-                    if (c)
-                    {
-                        nSeen |= (1 << (c - 1));
-                    }
+                    CalculateSeen(x, y, nSeen);
                 }
             }
-
 
             //Go through each element in this 3x3 block and remove the 'seen' numbers from the posssible values
             for (int innerY = 0; innerY < 3; innerY++)
@@ -307,59 +343,85 @@ SolveState Board::SolveStep()
                 for (int innerX = 0; innerX < 3; innerX++)
                 {
                     const int x = outerX + innerX;
+                    RemoveSeen(x, y, nSeen);
 
-                    if (!m_Cells[x + y * 9].GetValue())
-                    {
-                        m_Cells[x + y * 9].RemovePossibleL(nSeen);
-                    }
-                    
                 }
             }
         }
     }
+}
 
-    //Now check if a cell contains only one possibility.. If that is the case then you can set its value to the only possible value.
-    for (int i = 0; i < 81; i++)
-    {
-        m_Cells[i].UpdateValue();
-    }
+/////////////////////////////////////////////////////////////////////////
+//                                                                     //
+//                                                                     //
+//                       Set Unique values                             //
+//                                                                     //
+//                                                                     //
+/////////////////////////////////////////////////////////////////////////
 
-    
-    
-    //Now check if a row has only one cell which can contain a number (Eg: if the number 9 is only possible at one place on the row, then u can set the value of that Cell to 9)
- 
+//DELETE THIS LATER
+extern GLFWwindow* g_TempWindow;
+#include "Renderer/Renderer.h"
+
+void Board::SetUniqueCellValue()
+{
     Pair pairs[9];
 
-    for (int y = 0; y < 9; y++)
+    auto CalculatePossibilityCount = [&pairs, this](int x, int y)
     {
-        memset(pairs, 0, sizeof(Pair) * 9);
-        for (int x = 0; x < 9; x++)
+        int index = x + y * 9;
+        unsigned char nVal = m_Cells[index].GetValue();
+        if (nVal < 1 || nVal > 9)
         {
-            Cell& cell = m_Cells[x + y * 9];
-            if (cell.GetValue())    continue;   //The cell has a number in it
-
             //calculate the pairs 
-            for (int i = 0; i < 9; i++)
+            unsigned short nPossible = m_Cells[index].GetPossitbleL();
+            unsigned short bitMask = 1;
+            for (int i = 0; i < 9; i++, bitMask <<= 1)
             {
-                if (cell.GetPossible(i+1))
+                if (nPossible & bitMask)
                 {
-                    pairs[i].nCount++;
-                    pairs[i].nx = x;
-                    pairs[i].ny = y;
+                    const Pair pair = { pairs[i].nCount + 1, x, y };
+                    pairs[i] = pair;
                 }
             }
         }
+        else
+        {
+            //the number mVal already exists in this section, so mark the pair as invalid
+            pairs[nVal - 1].nCount = 30;    //30 is an arbitrary high number... The pair's value is used only if nCount = 1, so any number higher than 1 would work.
+        }
+    };
 
+
+    auto SetValuesFromPossibilityCount = [&pairs, this]() -> int
+    {
+        int num = 0;
         //Pairs have been calculated, now check if any of the occurences if 1
-        //check if theres any digit which can only exist in one cell, if so then assign it
+       //check if theres any digit which can only exist in one cell, if so then assign it
         for (unsigned char i = 0; i < 9; i++)
         {
             if (pairs[i].nCount == 1)
             {
                 const int nIndex = pairs[i].nx + pairs[i].ny * 9;
                 m_Cells[nIndex].SetValue(i + 1);
+                num++;
             }
         }
+        return num;
+    };
+
+
+    int nReplacements = 0;  //stores the number of cells whose value was calculated in this function (solve step).
+
+    ///Now check if a ROW has only one cell which can contain a number (Eg: if the number 9 is only possible at one place on the row, then u can set the value of that Cell to 9)
+    for (int y = 0; y < 9; y++)
+    {
+        memset(pairs, 0, sizeof(Pair) * 9);
+        for (int x = 0; x < 9; x++)
+        {
+            CalculatePossibilityCount(x, y);
+        }
+        nReplacements += SetValuesFromPossibilityCount();
     }
 
 
@@ -370,35 +432,15 @@ SolveState Board::SolveStep()
         memset(pairs, 0, sizeof(Pair) * 9);
         for (int y = 0; y < 9; y++)
         {
-            Cell& cell = m_Cells[x + y * 9];
-            if (cell.GetValue())    continue;   //The cell has a number in it
-
-            //calculate the pairs 
-            for (int i = 0; i < 9; i++)
-            {
-                if (cell.GetPossible(i + 1))
-                {
-                    pairs[i].nCount++;
-                    pairs[i].nx = x;
-                    pairs[i].ny = y;
-                }
-            }
+            CalculatePossibilityCount(x, y);
         }
 
         //Pairs have been calculated, now check if any of the occurences if 1
         //check if theres any digit which can only exist in one cell, if so then assign it
-        for (unsigned char i = 0; i < 9; i++)
-        {
-            if (pairs[i].nCount == 1)
-            {
-                const int nIndex = pairs[i].nx + pairs[i].ny * 9;
-                m_Cells[nIndex].SetValue(i + 1);
-            }
-        }
+        nReplacements += SetValuesFromPossibilityCount();
     }
 
     //Now check if a 3X3 block has only one cell which can contain a number (Eg: if the number 9 is only possible at one place on the block, then u can set the value of that Cell to 9)
-
     for (int outerY = 0; outerY <= 6; outerY += 3)
     {
         for (int outerX = 0; outerX <= 6; outerX += 3)
@@ -411,36 +453,48 @@ SolveState Board::SolveStep()
                 for (int innerX = 0; innerX < 3; innerX++)
                 {
                     const int x = outerX + innerX;
-
-                    Cell& cell = m_Cells[x + y * 9];
-                    if (cell.GetValue())    continue;   //The cell has a number in it
-
-                    //calculate the pairs 
-                    for (int i = 0; i < 9; i++)
-                    {
-                        if (cell.GetPossible(i + 1))
-                        {
-                            pairs[i].nCount++;
-                            pairs[i].nx = x;
-                            pairs[i].ny = y;
-                        }
-                    }
-
+                    CalculatePossibilityCount(x, y);
                 }
             }
 
             //Pairs have been calculated, now check if any of the occurences if 1
-        //check if theres any digit which can only exist in one cell, if so then assign it
-            for (unsigned char i = 0; i < 9; i++)
-            {
-                if (pairs[i].nCount == 1)
-                {
-                    const int nIndex = pairs[i].nx + pairs[i].ny * 9;
-                    m_Cells[nIndex].SetValue(i + 1);
-                }
-            }
-
+            //check if theres any digit which can only exist in one cell, if so then assign it
+            nReplacements += SetValuesFromPossibilityCount();
         }
     }
+
+    
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//                                                                     //
+//                                                                     //
+//                                                                     //
+//                           THIS IS IT....                            //
+//         The main function which ties everything together            //
+//                                                                     //
+//                                                                     //
+/////////////////////////////////////////////////////////////////////////
+SolveState Board::SolveStep()
+{
+    if (IsSolved()) return SolveState::Solved;
+    if (CheckContradiction())
+    {
+        //LOG_WARN("Contradiction");
+        return SolveState::Contradiction;
+    }
+
+    EliminatePossibleValues();
+
+
+    //Now check if a cell contains only one possibility.. If that is the case then you can set its value to the only possible value.
+    for (int i = 0; i < 81; i++)
+    {
+        m_Cells[i].UpdateValue();
+    }
+    
+    SetUniqueCellValue();
+    
     return SolveState::None;
 }

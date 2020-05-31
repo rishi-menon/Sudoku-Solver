@@ -20,10 +20,15 @@ Application::~Application()
    }
 }
 
+//DELETE THIS LATER
+GLFWwindow* g_TempWindow;
+
 void Application::Run()
 {
    Renderer::Init();
    Renderer::SetMvpMatrix(0.0f, m_nWidth, 0.0f, m_nHeight);
+   
+   g_TempWindow = m_pWindow;
 
    {
       unsigned char buf[] = { 255, 255, 255, 255 };
@@ -60,7 +65,7 @@ void Application::Run()
          Application* pApp = static_cast<Application*>(glfwGetWindowUserPointer(window));
          if (pApp)
          {
-            //LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
+            LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
             if (action == GLFW_PRESS || action == GLFW_REPEAT)
             {
                pApp->GetBoardManager().OnKey(key);

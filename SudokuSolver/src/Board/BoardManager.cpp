@@ -30,26 +30,39 @@ void BoardManager::OnMouseDown(double posX, double posY)
 }
 void BoardManager::OnKey(int key)
 {
-   const int nSolvingKey = 'S';
-   const int nClearAllKey = 'C';
-   if (m_pBoard)
-   {
-      //Start solving here
-      if (!m_bSolving)
-      {
-         m_pBoard->OnKey(key);
-         if (key == nSolvingKey)
-         {
+    static bool bResetValues = true;
+
+    const int nSolvingKey = 'S';
+    const int nClearAllKey = 'C';
+    if (m_pBoard)
+    {
+        m_pBoard->OnKey(key, m_bSolving);
+      
+        if (key == nSolvingKey && !m_bSolving)
+        {
+            //Start solving
             m_bSolving = true;
             m_pBoard->ClearSelection();
             m_pBoard->ResetPossibleValues();
-         }
-      }
-      if (key == nClearAllKey)
-      {
-         Clear();
-         m_bSolving = false;
-      }
+        }
+        if (key == nClearAllKey)
+        {
+            Clear();
+            m_bSolving = false;
+            bResetValues = true;
+        }
+
+#if 1
+        if (key == 'Q')
+        {
+            if (bResetValues)
+            {
+                m_pBoard->ResetPossibleValues();
+                bResetValues = false;
+            }
+            SolveStep();
+        }
+#endif
    }
    else { LOG_WARN("Warning: Current board is null"); }
 }
@@ -113,17 +126,15 @@ void BoardManager::DrawBoard()
 #if 1
    //Load board, for debugging purposes
    unsigned char board[81] = {
-       9,5,0, 3,0,7, 2,0,0,
-       0,2,0, 0,4,5, 0,0,0,
-       0,0,0, 2,0,0, 0,0,0,
-
-       0,8,0, 0,3,6, 0,1,0,
-       1,4,3, 0,5,0, 0,8,6,
-       6,0,5, 0,0,4, 0,0,3,
-
-       5,0,0, 0,9,0, 0,7,0,
-       0,9,2, 0,7,1, 0,0,0,
-       7,6,4, 0,0,3, 1,9,0,
+       0,1,0,2,0,5,0,0,7,
+       0,0,7,0,1,0,0,0,6,
+       2,0,0,0,7,8,0,9,0,
+       3,0,0,0,0,0,7,0,4,
+       7,2,8,0,6,0,0,0,0,
+       9,0,0,7,0,0,0,8,5,
+       0,0,0,3,0,0,0,7,0,
+       0,7,0,0,5,0,4,1,3,
+       0,3,0,0,0,7,0,0,0
    };
 
    m_pBoard->LoadBoard(board);
@@ -143,13 +154,18 @@ void BoardManager::Update()
 {
    if (!m_bSolving || !m_pBoard) return;
    //Start solving here
+   SolveStep();
+}
 
-   SolveState state = m_pBoard->SolveStep();
+void BoardManager::SolveStep()
+{
+    SolveState state = m_pBoard->SolveStep();
 
-   switch (state)
-   {
+    switch (state)
+    {
         case SolveState::Contradiction:
         {
+            LOG_WARN("Contradiction");
             break;
         }
         case SolveState::CreateGuess:
@@ -162,5 +178,5 @@ void BoardManager::Update()
             m_bSolving = false;
             break;
         }
-   }
+    }
 }

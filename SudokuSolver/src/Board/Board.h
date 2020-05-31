@@ -8,10 +8,19 @@ enum class SolveState : unsigned int
 	Solved,
 	CreateGuess
 };
+
+struct BoardAssumption
+{
+	unsigned char m_nBoardX;
+	unsigned char m_nBoardY;
+	unsigned short m_nAssumption;
+};
+
 class Board
 {
 public:
    Board();
+   Board(const Board& board);
 
    void OnRender();
 
@@ -23,7 +32,7 @@ public:
    
    //Events
    void OnMouseDown(double posX, double posY);
-   void OnKey(int key);
+   void OnKey(int key, bool bSolving);
    
    void LoadBoard(unsigned char data[81]);
    SolveState SolveStep();
@@ -37,15 +46,27 @@ private:
 		unsigned char ny;
 	};
 
+	void EliminatePossibleValues();//eliminates the possibilities of each cell
+	void SetUniqueCellValue();//Set the value of a block if the number can only exist in that block
+
 private:
 	bool IsSolved() const;
 	bool CheckContradiction() const;
-	//the function calculates the pairs for any given cell. The pairs stores the number of places where a particular number is possible within a row/column/block. So in an entire row if the number 9 can exist in only one place, then that cell must contain a 9. (consequently the nCount would be one.) The index into the array stores the digit value (Its like a map with the digit as the key). So the pair with value nCount = 2 would be stored at index 8 (because the value of the number was 9 in the example)
+	//The pairs stores the number of places where a particular number is possible within a row/column/block. So in an entire row if the number 9 can exist in only one place, then that cell must contain a 9. (consequently the nCount would be one.) The index into the array stores the digit value (Its like a map with the digit as the key). So the pair with value nCount = 2 would be stored at index 8 (because the value of the number was 9 in the example)
 	//void CalculateUniqueCells(int x, int y, Pair pairs[]);
 private:
    Cell m_Cells[81];
+   
+   //For highlighting the current cell
    Cell* m_pCurrentCell;
    int m_nSelectedX;
    int m_nSelectedY;
-   Board* m_nextBoard;  //link list
+
+   //stores the assumption of the CURRENT board
+   BoardAssumption m_Assumption;
+
+   int m_nMiss;	//This stores the number of times that nothing was evaluated by the solveStep... It gets reset if a number was deduced. If it gets too high then make an assumption and continue solving
+
+   //The boardManager manages the addition and removal of boards. When no more guesses can be made, then a new board is created (copy of the original) and an assumption is made. The link list has the following structure (new board -> original -> nullptr).  
+   Board* m_nextBoard;
 };

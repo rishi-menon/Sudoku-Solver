@@ -4,33 +4,49 @@
 #include "Renderer/AssetManager.h"
 
 Cell::Cell() :
-   m_nPossibleValues(0x01FF),
+   m_nPossibleValues(0),
    m_nValue(0)
 {
 }
+Cell::Cell(const Cell& cell) :
+    m_nPossibleValues(cell.m_nPossibleValues),
+    m_nValue(cell.m_nValue)
+{
+}
+
 
 void Cell::Clear()
 {
-   m_nPossibleValues = 0x01FF;
+   m_nPossibleValues = 0;
    m_nValue = 0;
 }
 
-static void GetSelectedQuadPosition(int gridX, int gridY, Quad& outQuad)
+static void GetSelectedQuadPosition(int gridX, int gridY, Quad& outQuad, glm::vec3 offScale = glm::vec3{ 0,0,1 })
 {
+    //offScale (offset scale percent): the x and y components give the percent of the cell to offset. (Value of (1, 0.5) would mean offset the x position by cell width (coordinates are from bottom left corner) and offset y position of cell by 0.5*cell height. The z component refers to the width and height percent of the quad. Value of 0.5 would mean the quad should be at 0.5*width, and 0.5*height
+
    glm::vec4 colSelected = { 80, 80, 80, 80 };
    colSelected *= 1.0f / 255.0f;
    //Useful constants
-   const float dx = (g_rectBoard.z - g_rectBoard.x) / 9.0f;
-   const float dy = (g_rectBoard.w - g_rectBoard.y) / 9.0f;
-   const float startingX = g_rectBoard.x + gridX * dx;
-   const float startingY = g_rectBoard.y + gridY * dy;
+   float dx = (g_rectBoard.z - g_rectBoard.x) / 9.0f;
+   float dy = (g_rectBoard.w - g_rectBoard.y) / 9.0f;
+   
+   float startingX = g_rectBoard.x + gridX * dx;
+   float startingY = g_rectBoard.y + gridY * dy;
+
+   startingX += offScale.x * dx;
+   startingY += offScale.y * dy;
+
+   //dx dy now store the width and height of the quad... (Earlier it stored the width and height of the cell)
+   dx *= offScale.z;
+   dy *= offScale.z;
 
    outQuad.m_vertices[0] = Vertex{ {startingX, startingY},           colSelected, 0, {0, 0} };
    outQuad.m_vertices[1] = Vertex{ {startingX + dx, startingY},      colSelected, 0, {0, 0} };
    outQuad.m_vertices[2] = Vertex{ {startingX + dx, startingY + dy}, colSelected, 0, {0, 0} };
    outQuad.m_vertices[3] = Vertex{ {startingX, startingY + dy},      colSelected, 0, {0, 0} };
 }
-static void GetQuadFromNumber(int digit, int gridX, int gridY, Quad& outQuad)
+static void GetQuadFromNumber(int digit, int gridX, int gridY, Quad& outQuad, glm::vec3 offScale = glm::vec3{ 0,0,1 })
 {
 #if 1
    //Calculate color
@@ -63,14 +79,8 @@ static void GetQuadFromNumber(int digit, int gridX, int gridY, Quad& outQuad)
    glm::vec4 colTL = glm::vec4 {0.8,0.4, 0.1, 1.0};
    glm::vec4 colTR = glm::vec4 {0.8,0.4, 0.1, 1.0};
 #endif
-   /*
-   //Useful constants
-   const float dx = (g_rectBoard.z - g_rectBoard.x)/9.0f;
-   const float dy = (g_rectBoard.w - g_rectBoard.y)/9.0f;
-   const float startingX = g_rectBoard.x + gridX * dx;
-   const float startingY = g_rectBoard.y + gridY * dy;
-   */
-   GetSelectedQuadPosition(gridX, gridY, outQuad); 
+
+   GetSelectedQuadPosition(gridX, gridY, outQuad, offScale);
    //functions sets the position of the quad. Now set the texture coords and the color
 
    const float texdx = 1.0f/5.0f;
@@ -96,6 +106,24 @@ static void GetQuadFromNumber(int digit, int gridX, int gridY, Quad& outQuad)
    outQuad.m_vertices[3].m_vTextureCoord = { texX, texY + texdy };
 }
 
+void Cell::OnRenderSubNumbers(int x, int y)
+{
+    short bitField = 0x0001;
+    for (int yLoop = 0; yLoop < 3; yLoop++)
+    {
+        for (int xLoop = 0; xLoop < 3; xLoop++)
+        {
+            if (m_nPossibleValues & bitField)
+            {
+                Quad quad;
+                glm::vec3 offsetScale{ xLoop / 3.0f, yLoop / 3.0f, 1.0f / 3.0f };
+                GetQuadFromNumber(xLoop + 3 * yLoop + 1, x, y, quad, offsetScale);
+                Renderer::DrawQuad(quad);
+            }
+            bitField <<= 1;
+        }
+    }
+}
 void Cell::OnRender(int x, int y)
 {
    if (m_nValue > 0 && m_nValue < 10)
@@ -103,6 +131,10 @@ void Cell::OnRender(int x, int y)
       Quad quad;
       GetQuadFromNumber(m_nValue, x, y, quad);
       Renderer::DrawQuad(quad);
+   }
+   else
+   {
+       OnRenderSubNumbers(x, y);
    }
 }
 
@@ -115,10 +147,8 @@ void Cell::OnRenderSelected(int x, int y)
 
 int Cell::UpdateValue()
 {
-    if (m_nValue)
-    {
-        return 0;
-    }
+    if (m_nValue) { return 0; }
+
     int nCount = 0;
     int nDigit;
     // 00000001 11111111

@@ -24,6 +24,8 @@ public:
 
 private:
    void Clear();
+   void SolveStep();
+
 private:
    Board* m_pBoard;
    bool m_bSolving;
