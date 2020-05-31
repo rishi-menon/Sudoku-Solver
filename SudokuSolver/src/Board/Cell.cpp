@@ -112,3 +112,29 @@ void Cell::OnRenderSelected(int x, int y)
    GetSelectedQuadPosition(x, y, quad);
    Renderer::DrawQuad(quad);
 }
+
+int Cell::UpdateValue()
+{
+    if (m_nValue)
+    {
+        return 0;
+    }
+    int nCount = 0;
+    int nDigit;
+    // 00000001 11111111
+    for (int i = 0; i < 9; i++)
+    {
+        bool n = m_nPossibleValues & ((short)(1) << i);
+        if (n)
+        {
+            nCount++;
+            nDigit = i + 1;
+        }
+    }
+
+    if (nCount == 1)
+    {
+        m_nValue = nDigit;
+    }
+    return nCount;
+}

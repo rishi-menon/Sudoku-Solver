@@ -42,6 +42,7 @@ void BoardManager::OnKey(int key)
          {
             m_bSolving = true;
             m_pBoard->ClearSelection();
+            m_pBoard->ResetPossibleValues();
          }
       }
       if (key == nClearAllKey)
@@ -108,6 +109,25 @@ void BoardManager::DrawBoard()
       x += width / 3.0f;
       y += height / 3.0f;
    }
+
+#if 1
+   //Load board, for debugging purposes
+   unsigned char board[81] = {
+       9,5,0, 3,0,7, 2,0,0,
+       0,2,0, 0,4,5, 0,0,0,
+       0,0,0, 2,0,0, 0,0,0,
+
+       0,8,0, 0,3,6, 0,1,0,
+       1,4,3, 0,5,0, 0,8,6,
+       6,0,5, 0,0,4, 0,0,3,
+
+       5,0,0, 0,9,0, 0,7,0,
+       0,9,2, 0,7,1, 0,0,0,
+       7,6,4, 0,0,3, 1,9,0,
+   };
+
+   m_pBoard->LoadBoard(board);
+#endif
 }
 
 void BoardManager::OnRender()
@@ -121,10 +141,26 @@ void BoardManager::OnRender()
 
 void BoardManager::Update()
 {
-   if (!m_bSolving) return;
-
+   if (!m_bSolving || !m_pBoard) return;
    //Start solving here
 
+   SolveState state = m_pBoard->SolveStep();
 
-
+   switch (state)
+   {
+        case SolveState::Contradiction:
+        {
+            break;
+        }
+        case SolveState::CreateGuess:
+        {
+            break;
+        }
+        case SolveState::Solved:
+        {
+            LOG_INFO("Sudoku has been solved !!");
+            m_bSolving = false;
+            break;
+        }
+   }
 }

@@ -7,15 +7,26 @@ class Cell
 {
 public:
    Cell();
+
+   //High Level Get, Set value functions
    inline bool GetPossible(int digit) const { 
       ASSERT(digit >= 1 && digit <= 9, "Invalid digit"); 
       return m_nPossibleValues & (1 << (digit - 1));
    }
-
    inline void SetPossible (int digit, bool state) { 
       ASSERT(digit >= 1 && digit <= 9, "Invalid digit"); 
       if (state) m_nPossibleValues |= 1 << (digit - 1);
       else       m_nPossibleValues &= ~(1 << (digit - 1));
+   }
+
+   //Low Level Get, Set... Use only if you know what youre doing
+   inline short GetPossitbleL() const { return m_nPossibleValues; }
+   inline void SetPossibleL(unsigned short sPossible) { m_nPossibleValues = sPossible; }
+
+   //can remove one or multiple possibilities in one go
+   inline void RemovePossibleL(short sPossible) {
+       m_nPossibleValues &= ~sPossible; 
+       int test = 1;
    }
 
    inline unsigned char GetValue() const { return m_nValue; }
@@ -25,8 +36,12 @@ public:
    void OnRenderSelected(int x, int y);
 
    void Clear();
+
+   //if theres only one possibility then set it
+   int UpdateValue();
+
 private:
    //bitmask... LSB stores digit 1. Value at that bit is true if its value is possible
    unsigned short m_nPossibleValues;
-   unsigned char m_nValue;
+   unsigned char m_nValue;  //stores 0 if it is empty 
 };
