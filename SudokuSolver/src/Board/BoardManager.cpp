@@ -6,9 +6,11 @@
 glm::vec4 g_rectBoard;
 
 BoardManager::BoardManager() :
-   m_bSolving (false)
+   m_bSolving (false),
+    m_nBoardListCount(1)
 {
    m_pBoard = new Board;
+   m_nBoardListCount = 1;
 }
 BoardManager::~BoardManager()
 {
@@ -43,11 +45,12 @@ void BoardManager::OnKey(int key)
             //Start solving
             m_bSolving = true;
             m_pBoard->ClearSelection();
-            m_pBoard->ResetPossibleValues();
+            m_pBoard->ResetPossibleValues(0x01FF);
         }
         if (key == nClearAllKey)
         {
-            Clear();
+            DeleteExtraBoards();
+            m_pBoard->ClearBoard();
             m_bSolving = false;
             bResetValues = true;
         }
@@ -57,7 +60,7 @@ void BoardManager::OnKey(int key)
         {
             if (bResetValues)
             {
-                m_pBoard->ResetPossibleValues();
+                m_pBoard->ResetPossibleValues(0x01FF);
                 bResetValues = false;
             }
             SolveStep();
@@ -67,22 +70,23 @@ void BoardManager::OnKey(int key)
    else { LOG_WARN("Warning: Current board is null"); }
 }
 
-void BoardManager::Clear()
+void BoardManager::DeleteExtraBoards()
 {
    if (!m_pBoard) m_pBoard = new Board();
    else
    {
+      Board* pCur = m_pBoard;
       Board* pNext = m_pBoard->GetNext();
       while (pNext)
       {
-         Board* pBoard = pNext->GetNext();
-         delete pNext;
-         pNext = pBoard;
+          delete pCur;
+          pCur = pNext;
+          pNext = pNext->GetNext();
       }
 
-      m_pBoard->SetNext(nullptr);
-      m_pBoard->ClearBoard();
+      m_pBoard = pCur;
    }
+   m_nBoardListCount = 1;
 }
 void BoardManager::DrawBoard()
 {
@@ -165,11 +169,58 @@ void BoardManager::SolveStep()
     {
         case SolveState::Contradiction:
         {
-            LOG_WARN("Contradiction");
+            Board* current = m_pBoard;
+            Board* next = m_pBoard->GetNext();
+            if (!next)
+            {
+                //Contradiction... No solution exists
+                LOG_WARN("Contradiction... Sudoku is impossible to solve");
+                m_bSolving = false;
+            }
+            else
+            {
+                BoardAssumption assumption = current->GetAssumption();
+                if (assumption.m_ndigit >= 0)
+                {
+                    int index = assumption.m_nBoardX + assumption.m_nBoardY * 9;
+                    next->GetCells()[index].RemovePossibleL(assumption.m_nAssumption);
+
+                    m_pBoard = next;
+                    delete current;
+                }
+                else
+                {
+                    ASSERT(false, "Invalid digit stored in BoardAssumption");
+                }
+            }
             break;
         }
         case SolveState::CreateGuess:
         {
+            if (m_nBoardListCount >= m_nMaxCount)
+            {
+                DeleteExtraBoards();
+                m_pBoard->ResetPossibleValues(0);
+                LOG_WARN("Memory overflow... Too many assumptions were made. Cannot solve this puzzle.");
+                m_bSolving = false;
+            }
+            else
+            {
+                m_nBoardListCount++;
+
+                BoardAssumption assumption = m_pBoard->CreateAssumption();
+                if (assumption.m_ndigit >= 0)
+                {
+                    Board* newBoard = new Board(*m_pBoard);
+                    newBoard->SetNext(m_pBoard);
+                    newBoard->SetAssumption(assumption);
+
+                    int index = assumption.m_nBoardX + assumption.m_nBoardY * 9;
+                    newBoard->GetCells()[index].SetValue(assumption.m_ndigit);  //Set the value of the assumption that was made
+
+                    m_pBoard = newBoard;
+                }
+            }
             break;
         }
         case SolveState::Solved:

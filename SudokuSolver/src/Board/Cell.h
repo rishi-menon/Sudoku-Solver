@@ -25,7 +25,7 @@ public:
    inline void SetPossibleL(unsigned short sPossible) { m_nPossibleValues = sPossible; }
 
    //can remove one or multiple possibilities in one go
-   inline void RemovePossibleL(short sPossible) {
+   inline void RemovePossibleL(unsigned short sPossible) {
        m_nPossibleValues &= ~sPossible; 
        int test = 1;
    }
@@ -42,6 +42,8 @@ public:
 
    //if theres only one possibility then set it
    int UpdateValue();
+
+   unsigned char GetNumPossibilities() const;
 
 private:
 private:

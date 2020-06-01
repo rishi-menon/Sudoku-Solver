@@ -14,6 +14,7 @@ struct BoardAssumption
 	unsigned char m_nBoardX;
 	unsigned char m_nBoardY;
 	unsigned short m_nAssumption;
+	char m_ndigit;
 };
 
 class Board
@@ -26,9 +27,12 @@ public:
 
    inline Board* GetNext() const { return m_nextBoard; }
    inline void SetNext(Board* pNext) { m_nextBoard = pNext; }
+
+   inline Cell* GetCells() { return m_Cells; }
+
    void ClearBoard();
    void ClearSelection() { m_pCurrentCell = nullptr;  }
-   void ResetPossibleValues();
+   void ResetPossibleValues(unsigned short val);
    
    //Events
    void OnMouseDown(double posX, double posY);
@@ -36,6 +40,11 @@ public:
    
    void LoadBoard(unsigned char data[81]);
    SolveState SolveStep();
+
+   BoardAssumption CreateAssumption() const;
+
+   BoardAssumption GetAssumption() const { return m_Assumption; }
+   void SetAssumption(const BoardAssumption& assumption) { m_Assumption = assumption; }
 
 private:
 	//the nCount stores the number of possible occurences for a particular number. The x,y coordinates store the Cell location. If the count is 1, then Cell[x][y] must contain that digit (and that digit is given by the index position in the array)
@@ -65,7 +74,7 @@ private:
    //stores the assumption of the CURRENT board
    BoardAssumption m_Assumption;
 
-   int m_nMiss;	//This stores the number of times that nothing was evaluated by the solveStep... It gets reset if a number was deduced. If it gets too high then make an assumption and continue solving
+   unsigned char m_nMiss;	//This stores the number of times that nothing was evaluated by the solveStep... It gets reset if a number was deduced. If it gets too high then make an assumption and continue solving
 
    //The boardManager manages the addition and removal of boards. When no more guesses can be made, then a new board is created (copy of the original) and an assumption is made. The link list has the following structure (new board -> original -> nullptr).  
    Board* m_nextBoard;

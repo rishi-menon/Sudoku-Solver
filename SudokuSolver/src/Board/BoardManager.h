@@ -23,10 +23,13 @@ public:
    void Update();
 
 private:
-   void Clear();
+   void DeleteExtraBoards();
    void SolveStep();
 
 private:
    Board* m_pBoard;
    bool m_bSolving;
+
+   int m_nBoardListCount;
+   const int m_nMaxCount = 20;	//Max boards that can be created in the list... If it exceeds that, then it will stop solving and delete the extra boards
 };

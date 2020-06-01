@@ -168,3 +168,13 @@ int Cell::UpdateValue()
     }
     return nCount;
 }
+
+unsigned char Cell::GetNumPossibilities() const
+{
+    unsigned char num = 0;
+    for (unsigned short bitMask = 1; bitMask <= 0x01FF; bitMask <<= 1)
+    {
+        num += (bool)(m_nPossibleValues & bitMask);
+    }
+    return num;
+}

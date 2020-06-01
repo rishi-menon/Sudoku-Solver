@@ -3,10 +3,11 @@
 #include "Board.h"
 
 Board::Board() :
-   m_nextBoard (nullptr),
+    m_nextBoard (nullptr),
     m_nMiss (0),
     m_nSelectedX(-1),
-    m_nSelectedY(-1)
+    m_nSelectedY(-1),
+    m_Assumption { 0xFF,0xFF, 0xFFFF, (char)(-1) }
 {
 }
 
@@ -14,7 +15,8 @@ Board::Board(const Board& board) :
     m_nextBoard(nullptr),
     m_nMiss(0),
     m_nSelectedX(-1),
-    m_nSelectedY(-1)
+    m_nSelectedY(-1),
+    m_Assumption{ 0xFF,0xFF, 0xFFFF, (char)(-1) }
 {
     for (int i = 0; i < 81; i++)
     {
@@ -65,19 +67,7 @@ void Board::OnKey(int key, bool bSolving)
     {
         return;
     }
-#if 0
-    if (key == 'W')
-    {
-        //draw the sub keys
-        for (int y = 0; y < 9; y++)
-        {
-            for (int x = 0; x < 9; x++)
-            {
-                m_Cells[x + y*9].OnRenderSubNumbers(x, y);
-            }
-        }
-    }
-#endif
+
     //keyboard key values
     const int nLeft = 263;
     const int nRight = 262;
@@ -120,10 +110,32 @@ void Board::OnKey(int key, bool bSolving)
         }
 
         //insert a number into the currrently selected block if a number key was pressed
-        unsigned char val = static_cast<unsigned char> (key - '0');
-        if (val >= 0 && val < 10)
+        const int keyNumPad0 = 320;
+        const int keyNum0 = '0';
+        
+        unsigned char val = 20;
+        if (key >= keyNum0 && key <= keyNum0 + 9)
+        {
+            val = static_cast<unsigned char> (key - keyNum0);
+        }
+        else if (key >= keyNumPad0 && key <= keyNumPad0 + 9)
+        {
+            val = static_cast<unsigned char> (key - keyNumPad0);
+        }
+
+        if (val >= 0 && val <= 9)
         {
             m_pCurrentCell->SetValue(val);
+
+            //Move the selected tile to the left to make it easier to fill
+            m_nSelectedX++;
+            if (m_nSelectedX >= 9)
+            {
+                m_nSelectedX = 0;
+                m_nSelectedY++;
+                m_nSelectedY %= 9;
+            }
+            m_pCurrentCell = &m_Cells[m_nSelectedX + 9 * m_nSelectedY];
         }
     }
     else if (key >= nRight && key <= nUp)
@@ -143,14 +155,14 @@ void Board::ClearBoard()
       m_Cells[i].Clear();
    }
 }
-void Board::ResetPossibleValues()
+void Board::ResetPossibleValues(unsigned short val)
 {
     
     for (int i = 0; i < 81; i++)
     {
         if (!m_Cells[i].GetValue())
         {
-            m_Cells[i].SetPossibleL(0x01FF);
+            m_Cells[i].SetPossibleL(val);
         }
     }
 }
@@ -463,7 +475,14 @@ void Board::SetUniqueCellValue()
         }
     }
 
-    
+    if (!nReplacements)
+    {
+        m_nMiss++;
+    }
+    else
+    {
+        m_nMiss = 0;
+    }
 }
 
 
@@ -478,15 +497,10 @@ void Board::SetUniqueCellValue()
 /////////////////////////////////////////////////////////////////////////
 SolveState Board::SolveStep()
 {
-    if (IsSolved()) return SolveState::Solved;
-    if (CheckContradiction())
-    {
-        //LOG_WARN("Contradiction");
-        return SolveState::Contradiction;
-    }
-
+    if (CheckContradiction())   return SolveState::Contradiction;
+    if (IsSolved())             return SolveState::Solved;
+    
     EliminatePossibleValues();
-
 
     //Now check if a cell contains only one possibility.. If that is the case then you can set its value to the only possible value.
     for (int i = 0; i < 81; i++)
@@ -494,7 +508,67 @@ SolveState Board::SolveStep()
         m_Cells[i].UpdateValue();
     }
     
+    //This function also calculates the m_nMiss
     SetUniqueCellValue();
     
+    const unsigned char nMissMax = 3;
+    if (m_nMiss >= nMissMax)
+    {
+        m_nMiss = 0;
+        return SolveState::CreateGuess;
+    }
     return SolveState::None;
+}
+
+BoardAssumption Board::CreateAssumption() const
+{
+    // stores a pointer to a cell which contains 2 to 9 possibilities
+    const Cell* cells[8];
+    unsigned char posX[8];
+    unsigned char posY[8];
+
+    for (int i = 0; i < 8; cells[i] = 0, i++);
+
+    int nAdded = 0;
+
+    for (unsigned char y = 0; y < 9 && nAdded < 8; y++)
+    {
+        for (unsigned char x = 0; x < 9 && nAdded < 8; x++)
+        {
+            //this variable will vary from 0 to 7 (GetNumPos will vary from 1-9, AND it cannot be 1 because this function would be called only when its time to make an assumption)
+            unsigned char nPossibilities = m_Cells[x + 9*y].GetNumPossibilities();
+            ASSERT((nPossibilities >= 0 && nPossibilities <= 9), "Invalid sum");
+
+            if (nPossibilities >= 2 && nPossibilities <= 9 && !cells[nPossibilities-2])
+            {
+                nPossibilities -= 2;        //index 0 of cells array stores a Cell which has 2 possibilities.         
+                cells[nPossibilities] = &m_Cells[x+9*y];
+                posX[nPossibilities] = x;
+                posY[nPossibilities] = y;
+                nAdded++;
+                if (!nPossibilities) { nAdded = 10; }   //this is just a hack to break from inner AND outer for loop at the same time.
+            }
+        }
+    }
+
+    
+    for (unsigned char i = 0; i < 8; i++)
+    {
+        if (cells[i])
+        {
+            const unsigned short n = cells[i]->GetPossitbleL();
+            char digit = 1;
+            for (unsigned short bitMask = 1; bitMask <= 0x01FF; bitMask <<= 1)
+            {
+                if (bitMask & n)
+                {
+                    return BoardAssumption{posX[i], posY[i], bitMask, digit};
+                }
+                digit++;
+            }
+        }
+    }
+
+    ASSERT(false, "Board Assumption could not be created");
+    return BoardAssumption{ 0xFF,0xFF, 0xFFFF, (char)(-1) };
 }

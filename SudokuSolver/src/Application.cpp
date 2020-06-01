@@ -2,6 +2,7 @@
 #include "Application.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/AssetManager.h"
+#include <thread>   //for sleep
 
 Application::Application(GLFWwindow* pWindow, int nWidth, int nHeight) :
    m_boardManager(),
@@ -26,7 +27,7 @@ GLFWwindow* g_TempWindow;
 void Application::Run()
 {
    Renderer::Init();
-   Renderer::SetMvpMatrix(0.0f, m_nWidth, 0.0f, m_nHeight);
+   Renderer::SetMvpMatrix(0.0f, (float)m_nWidth, 0.0f, (float)m_nHeight);
    
    g_TempWindow = m_pWindow;
 
@@ -65,7 +66,7 @@ void Application::Run()
          Application* pApp = static_cast<Application*>(glfwGetWindowUserPointer(window));
          if (pApp)
          {
-            LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
+            //LOG_INFO("Key {0}, scancode {1}, action {2}, mods {3}", key, scancode, action, mods);
             if (action == GLFW_PRESS || action == GLFW_REPEAT)
             {
                pApp->GetBoardManager().OnKey(key);
@@ -87,6 +88,11 @@ void Application::Run()
       Renderer::EndScene();
       glfwSwapBuffers(m_pWindow);
       glfwPollEvents();
+
+      if (m_nSleepDuration)
+      {
+          std::this_thread::sleep_for(std::chrono::milliseconds(m_nSleepDuration));
+      }
    }
 
    AssetManager::OnExit();
