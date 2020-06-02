@@ -31,5 +31,5 @@ private:
    bool m_bSolving;
 
    int m_nBoardListCount;
-   const int m_nMaxCount = 20;	//Max boards that can be created in the list... If it exceeds that, then it will stop solving and delete the extra boards
+   const int m_nMaxCount = 1000;	//Max boards that can be created in the list... If it exceeds that, then it will stop solving and delete the extra boards
 };

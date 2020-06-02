@@ -26,5 +26,5 @@ private:
    int m_nWidth;
    int m_nHeight;
 
-   const int m_nSleepDuration = 50;  //in milliseconds
+   const int m_nSleepDuration = 0;  //in milliseconds
 };

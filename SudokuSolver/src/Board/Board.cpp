@@ -126,6 +126,7 @@ void Board::OnKey(int key, bool bSolving)
         if (val >= 0 && val <= 9)
         {
             m_pCurrentCell->SetValue(val);
+            m_pCurrentCell->SetPossibleL(0);
 
             //Move the selected tile to the left to make it easier to fill
             m_nSelectedX++;
@@ -267,6 +268,14 @@ bool Board::CheckContradiction() const
         }
     }
 
+    for (int i = 0; i < 81; i++)
+    {
+        if (!m_Cells[i].GetPossitbleL() && !m_Cells[i].GetValue())
+        {
+            //LOG_WARN("Warning: Empty cell has no possibilities");
+            return true;
+        }
+    }
     return false;
 }
 
@@ -535,6 +544,10 @@ BoardAssumption Board::CreateAssumption() const
     {
         for (unsigned char x = 0; x < 9 && nAdded < 8; x++)
         {
+            if (m_Cells[x + 9 * y].GetValue())
+            {
+                continue;
+            }
             //this variable will vary from 0 to 7 (GetNumPos will vary from 1-9, AND it cannot be 1 because this function would be called only when its time to make an assumption)
             unsigned char nPossibilities = m_Cells[x + 9*y].GetNumPossibilities();
             ASSERT((nPossibilities >= 0 && nPossibilities <= 9), "Invalid sum");

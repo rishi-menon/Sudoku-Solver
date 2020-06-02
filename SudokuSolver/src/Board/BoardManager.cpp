@@ -51,6 +51,7 @@ void BoardManager::OnKey(int key)
         {
             DeleteExtraBoards();
             m_pBoard->ClearBoard();
+            m_pBoard->SetMiss(0);
             m_bSolving = false;
             bResetValues = true;
         }
@@ -129,6 +130,18 @@ void BoardManager::DrawBoard()
 
 #if 1
    //Load board, for debugging purposes
+   /*
+       0,9,0,0,0,0,4,0,0,
+       0,0,8,5,0,0,0,1,0,
+       0,0,1,0,0,0,0,6,8,
+       0,0,0,1,0,0,0,3,0,
+       0,0,0,0,4,5,7,0,0,
+       0,5,0,0,0,7,0,0,0,
+       0,7,0,0,9,0,2,0,0,
+       0,0,3,6,0,0,0,0,0,
+       8,0,0,0,0,0,0,0,0
+   */
+#if 1
    unsigned char board[81] = {
        0,1,0,2,0,5,0,0,7,
        0,0,7,0,1,0,0,0,6,
@@ -140,6 +153,20 @@ void BoardManager::DrawBoard()
        0,7,0,0,5,0,4,1,3,
        0,3,0,0,0,7,0,0,0
    };
+#else
+   unsigned char board[81] = {
+       0,9,0,0,0,0,4,0,0,
+       0,0,8,5,0,0,0,1,0,
+       0,0,1,0,0,0,0,6,8,
+       0,0,0,1,0,0,0,3,0,
+       0,0,0,0,4,5,7,0,0,
+       0,5,0,0,0,7,0,0,0,
+       0,7,0,0,9,0,2,0,0,
+       0,0,3,6,0,0,0,0,0,
+       8,0,0,0,0,0,0,0,0
+       
+   };
+#endif
 
    m_pBoard->LoadBoard(board);
 #endif
@@ -209,6 +236,8 @@ void BoardManager::SolveStep()
                 m_nBoardListCount++;
 
                 BoardAssumption assumption = m_pBoard->CreateAssumption();
+                //LOG_TRACE("Made an assumption... Cell {0}, {1}: {2}", (int)assumption.m_nBoardX, (int)assumption.m_nBoardY, (int)assumption.m_ndigit);
+
                 if (assumption.m_ndigit >= 0)
                 {
                     Board* newBoard = new Board(*m_pBoard);

@@ -49,11 +49,18 @@ static void GetSelectedQuadPosition(int gridX, int gridY, Quad& outQuad, glm::ve
 static void GetQuadFromNumber(int digit, int gridX, int gridY, Quad& outQuad, glm::vec3 offScale = glm::vec3{ 0,0,1 })
 {
 #if 1
+
+    /*
+        0, 66, 146, 255
+        0, 66, 146, 255
+        0, 162, 81, 255
+        0, 162, 81, 255
+    */
    //Calculate color
-   glm::vec4 colTopLeftBg =   { 0, 66, 146, 255 };
-   glm::vec4 colTopRightBg =  { 0, 66, 146, 255 };
-   glm::vec4 colBotLeftBg =   { 0, 162, 81, 255 };
-   glm::vec4 colBotRightBg =  { 0, 162, 81, 255 };
+   glm::vec4 colTopLeftBg =   { 0, 120, 250,255 };
+   glm::vec4 colTopRightBg =  { 108, 255, 9, 255 };
+   glm::vec4 colBotLeftBg =   { 255, 220, 0, 255 };
+   glm::vec4 colBotRightBg =  { 255,0, 0, 255 };
 
    colTopLeftBg *= 1.0f / 255.0f;
    colTopRightBg *= 1.0f / 255.0f;

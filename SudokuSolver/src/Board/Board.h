@@ -46,6 +46,7 @@ public:
    BoardAssumption GetAssumption() const { return m_Assumption; }
    void SetAssumption(const BoardAssumption& assumption) { m_Assumption = assumption; }
 
+   void SetMiss(unsigned char c) { m_nMiss = c; }
 private:
 	//the nCount stores the number of possible occurences for a particular number. The x,y coordinates store the Cell location. If the count is 1, then Cell[x][y] must contain that digit (and that digit is given by the index position in the array)
 	struct Pair
