@@ -44,7 +44,7 @@ int main()
    glcall(glEnable(GL_BLEND));
    glcall(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
-   LOG_TRACE("OpenGL Version {0}", glGetString(GL_VERSION));
+   //LOG_TRACE("OpenGL Version {0}", glGetString(GL_VERSION));
 
    //Now you can finally start doing stuff...
    {
